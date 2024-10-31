@@ -1,0 +1,162 @@
+﻿@page "/tasks"
+@using ToDoApp.Model
+@using ToDoApp.Services.Interfaces
+@inject ITaskService TaskService
+
+<h3>Task Management</h3>
+
+<!-- Button to Add New Task -->
+<button class="btn btn-primary mb-3" @onclick="AddNewTask">Add New</button>
+
+<!-- Task List Table -->
+@if (tasks != null && tasks.Count > 0)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Done</th>
+                <th>Titel</th>
+                <th>Due Date</th>
+                <th>Beschreibung</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var task in tasks)
+            {
+                <tr>
+                    <!-- Checkbox to mark the task as done/undone -->
+                    <td>
+                        <input type="checkbox" checked="@task.IsDone" @onchange="(e) => OnCheckboxChanged(task, e)" />
+                    </td>
+
+                    <!-- Title -->
+                    <td>
+                        @if (editTask == task)
+                        {
+                            <InputText @bind-Value="task.Title" class="form-control" />
+                        }
+                        else
+                        {
+                            @task.Title
+                        }
+                    </td>
+
+                    <!-- Due Date -->
+                    <td>
+                        @if (editTask == task)
+                        {
+                            <InputDate @bind-Value="task.DueDate" class="form-control" />
+                        }
+                        else
+                        {
+                            @task.DueDate.ToString("yyyy-MM-dd")
+                        }
+                    </td>
+
+                    <!-- Description -->
+                    <td>
+                        @if (editTask == task)
+                        {
+                            <InputTextArea @bind-Value="task.Description" class="form-control" />
+                        }
+                        else
+                        {
+                            @task.Description
+                        }
+                    </td>
+
+                    <!-- Edit and Delete Buttons -->
+                    <td>
+                        @if (editTask == task)
+                        {
+                            <button class="btn btn-success" @onclick="() => SaveTask(task)">Save</button>
+                            <button class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-secondary" @onclick="() => EditTask(task)">Edit</button>
+                            <button class="btn btn-danger" @onclick="() => DeleteTask(task.Id)">Delete</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No tasks available.</p>
+}
+
+@code {
+    private List<TaskItem> tasks = new List<TaskItem>();
+    private TaskItem editTask = null; // Task being edited
+
+    // Load tasks on component initialization
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTasks();
+    }
+
+    // Load all tasks from local storage
+    private async Task LoadTasks()
+    {
+        tasks = await TaskService.GetAllTasksAsync();
+    }
+
+    // Add a new task with empty fields
+    private void AddNewTask()
+    {
+        var newTask = new TaskItem { Title = "", Description = "", DueDate = DateTime.Now };
+        tasks.Add(newTask);
+        editTask = newTask; // Set to edit mode immediately
+    }
+
+    // Edit a task
+    private void EditTask(TaskItem task)
+    {
+        editTask = task;
+    }
+
+    // Cancel edit and reset the editTask variable
+    private void CancelEdit()
+    {
+        editTask = null;
+    }
+
+    // Save the task after editing
+    private async Task SaveTask(TaskItem task)
+    {
+        if (task.Id == 0) // New task
+        {
+            await TaskService.AddTaskAsync(task);
+        }
+        else // Existing task
+        {
+            await TaskService.UpdateTaskAsync(task);
+        }
+
+        // Exit edit mode and reload tasks
+        editTask = null;
+        await LoadTasks();
+    }
+
+    // Handle checkbox change event for task completion
+    private async Task OnCheckboxChanged(TaskItem task, ChangeEventArgs e)
+    {
+        bool isChecked = (bool)e.Value;
+        task.IsDone = isChecked;
+
+        await TaskService.UpdateTaskAsync(task); // Update task status
+        await LoadTasks(); // Reload tasks to reflect the change
+    }
+    
+
+    // Delete a task
+    private async Task DeleteTask(int id)
+    {
+        await TaskService.DeleteTaskAsync(id);
+        await LoadTasks();
+    }
+}

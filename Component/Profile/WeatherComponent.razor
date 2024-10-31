@@ -1,0 +1,48 @@
+﻿@page "/weather"
+@using ToDoApp.Model
+@inject HttpClient Http
+
+<h3>Weather Information</h3>
+
+<input @bind="cityName" placeholder="Enter city name" />
+<button @onclick="GetWeather">Get Weather</button>
+
+@if (weatherResponse != null)
+{
+    <div class="weather-container">
+        <h4>Weather in @weatherResponse.Name, @weatherResponse.Sys.Country</h4>
+        <p><strong>Temperature:</strong> @((weatherResponse.Main.Temp - 273.15).ToString("0.00"))°C</p>
+        <p><strong>Feels Like:</strong> @((weatherResponse.Main.Feels_Like - 273.15).ToString("0.00"))°C</p>
+        <p><strong>Description:</strong> @weatherResponse.Weather[0].Description</p>
+        <p><strong>Humidity:</strong> @weatherResponse.Main.Humidity%</p>
+        <p><strong>Wind Speed:</strong> @weatherResponse.Wind.Speed m/s</p>
+    </div>
+}
+else if (errorMessage != null)
+{
+    <p style="color: red">@errorMessage</p>
+}
+
+@code {
+    private string cityName = "Dhaka";
+    private WeatherResponse weatherResponse;
+    private string errorMessage;
+
+    private async Task GetWeather()
+    {
+        errorMessage = null;
+
+        try
+        {
+            var apiKey = "2fd430985c92568299feab0f566ec6e5"; // Replace with your actual API key
+           
+            var url = $"https://api.openweathermap.org/data/2.5/weather?q={cityName}&appid={apiKey}";
+
+            weatherResponse = await Http.GetFromJsonAsync<WeatherResponse>(url);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Unable to retrieve weather data. Please check the city name.";
+        }
+    }
+}

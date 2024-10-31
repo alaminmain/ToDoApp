@@ -1,0 +1,113 @@
+﻿@page "/task-tabs"
+@using ToDoApp.Model
+@using ToDoApp.Services.Interfaces
+@inject ITaskService TaskService
+
+<h3>Task List Management</h3>
+<style>
+    ul.nav-tabs {
+        margin-bottom: 20px;
+    }
+
+        ul.nav-tabs .nav-item .nav-link {
+            cursor: pointer;
+        }
+
+</style>
+<!-- Tab Navigation -->
+<ul class="nav nav-tabs">
+    <li class="nav-item">
+        <a class="nav-link @(activeTab == "Open" ? "active" : "")" @onclick='() => SetActiveTab("Open")'>Abgeschlossen</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(activeTab == "Due" ? "active" : "")" @onclick='() => SetActiveTab("Due")'>Fällig</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(activeTab == "Completed" ? "active" : "")" @onclick='() => SetActiveTab("Completed")'>Offen</a>
+    </li>
+</ul>
+<!-- Tab Content -->
+@if (activeTab == "Open")
+{
+    <h4>Open Tasks</h4>
+    <ul>
+        @if (openTasks != null && openTasks.Count > 0)
+        {
+            @foreach (var task in openTasks)
+            {
+                <li>@task.Title - @task.DueDate.ToString("yyyy-MM-dd")</li>
+            }
+        }
+        else
+        {
+            <li>No open tasks available.</li>
+        }
+    </ul>
+}
+else if (activeTab == "Due")
+{
+    <h4>Due Tasks</h4>
+    <ul>
+        @if (dueTasks != null && dueTasks.Count > 0)
+        {
+            @foreach (var task in dueTasks)
+            {
+                <li>@task.Title - @task.DueDate.ToString("yyyy-MM-dd")</li>
+            }
+        }
+        else
+        {
+            <li>No due tasks available.</li>
+        }
+    </ul>
+}
+else if (activeTab == "Completed")
+{
+    <h4>Completed Tasks</h4>
+    <ul>
+        @if (completedTasks != null && completedTasks.Count > 0)
+        {
+            @foreach (var task in completedTasks)
+            {
+                <li>@task.Title - @task.DueDate.ToString("yyyy-MM-dd")</li>
+            }
+        }
+        else
+        {
+            <li>No completed tasks available.</li>
+        }
+    </ul>
+}
+
+@code {
+    private List<TaskItem> tasks = new List<TaskItem>();
+    private List<TaskItem> openTasks = new List<TaskItem>();
+    private List<TaskItem> dueTasks = new List<TaskItem>();
+    private List<TaskItem> completedTasks = new List<TaskItem>();
+    private string activeTab = "Open";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTasks();
+        FilterTasks();
+    }
+
+    private async Task LoadTasks()
+    {
+        tasks = await TaskService.GetAllTasksAsync();
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+    }
+
+    private void FilterTasks()
+    {
+        var currentDate = DateTime.Now;
+
+        openTasks = tasks.Where(t => !t.IsDone && t.DueDate >= currentDate).ToList();
+        dueTasks = tasks.Where(t => !t.IsDone && t.DueDate < currentDate).ToList();
+        completedTasks = tasks.Where(t => t.IsDone).ToList();
+    }
+}

@@ -1,0 +1,128 @@
+﻿@page "/profiles"
+@using ToDoApp.Model
+@using ToDoApp.Services.Interfaces
+@inject IProfileService ProfileService
+
+<h3>Profile Management</h3>
+
+<!-- Add/Edit Form -->
+<EditForm Model="editProfile" OnValidSubmit="SaveProfile">
+    <div>
+        <label>Vorname:</label>
+        <InputText @bind-Value="editProfile.FirstName" class="form-control" />
+    </div>
+    <div>
+        <label>Nachname:</label>
+        <InputText @bind-Value="editProfile.LastName" class="form-control" />
+    </div>
+    <div>
+        <label>Adresse :</label>
+        <InputText @bind-Value="editProfile.Address" class="form-control" />
+    </div>
+    <div>
+        <label>Profilbild:</label>
+        <InputText @bind-Value="editProfile.ProfilePictureUrl" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+</EditForm>
+
+<hr />
+
+<!-- List of Profiles -->
+<h3>Profile List</h3>
+@if (profiles != null && profiles.Count > 0)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Vorname</th>
+                <th>Nachname</th>
+                <th>Adresse</th>
+                <th>Profilbild</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var profile in profiles)
+            {
+                <tr>
+                    <td>@profile.FirstName</td>
+                    <td>@profile.LastName</td>
+                    <td>@profile.Address</td>
+                    <td>
+                        <img src="@profile.ProfilePictureUrl" alt="@profile.FirstName" style="width: 50px;" />
+                    </td>
+                    <td>
+                        <button class="btn btn-secondary" @onclick="() => EditProfile(profiles.IndexOf(profile))">Edit</button>
+                        <button class="btn btn-danger" @onclick="() => DeleteProfile(profiles.IndexOf(profile))">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No profiles available.</p>
+}
+
+@code {
+    // The list of profiles from local storage
+    private List<Profile> profiles = new List<Profile> ();
+    private Profile editProfile = new Profile();
+    private bool isEditing = false;
+
+    // Load profiles on component initialization
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfiles();
+    }
+
+    // Load all profiles from local storage
+    private async Task LoadProfiles()
+    {
+        profiles = await ProfileService.GetAllProfilesAsync();
+    }
+
+    // Add or Update a profile
+    private async Task SaveProfile()
+    {
+        if (isEditing)
+        {
+            // Find the index of the profile to update
+            int index = profiles.IndexOf(profiles.FirstOrDefault(p => p.FirstName == editProfile.FirstName && p.LastName == editProfile.LastName));
+            if (index >= 0)
+            {
+                await ProfileService.UpdateProfileAsync(index, editProfile);
+            }
+        }
+        else
+        {
+            // Add a new profile
+            await ProfileService.AddProfileAsync(editProfile);
+        }
+
+        // Reload profiles after the operation
+        await LoadProfiles();
+
+        // Reset the form
+        editProfile = new Profile();
+        isEditing = false;
+    }
+
+    // Edit an existing profile
+    private void EditProfile(int index)
+    {
+        // Load the profile into the form for editing
+        editProfile = profiles[index];
+        isEditing = true;
+    }
+
+    // Delete a profile
+    private async Task DeleteProfile(int index)
+    {
+        await ProfileService.DeleteProfileAsync(index);
+        await LoadProfiles(); // Reload profiles after deletion
+    }
+}
